@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AutoFrame 图片排版</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="side-panel">
+        <div class="brand">
+          <div class="brand-mark">AF</div>
+          <div>
+            <h1>AutoFrame</h1>
+            <p>图片排版画布</p>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label class="group-label">工具</label>
+          <div class="tool-grid" role="group" aria-label="工具">
+            <button id="moveTool" class="icon-button tool-button active" title="移动区域" aria-label="移动区域">
+              <span>↕</span>
+              <strong>移动区域</strong>
+            </button>
+            <button id="imageTool" class="icon-button tool-button" title="移动图片" aria-label="移动图片">
+              <span>⇄</span>
+              <strong>移动图片</strong>
+            </button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label class="group-label">区域比例</label>
+          <div class="segmented ratio-segmented" role="group" aria-label="区域比例">
+            <button class="ratio-button active" data-ratio="free">自由</button>
+            <button class="ratio-button" data-ratio="square">1:1</button>
+            <button class="ratio-button" data-ratio="classic">4:3</button>
+            <button class="ratio-button" data-ratio="wide">16:9</button>
+            <button class="ratio-button" data-ratio="custom">自定</button>
+          </div>
+          <div class="custom-ratio-row" aria-label="自定义区域比例">
+            <label>宽<input id="ratioW" type="number" min="1" max="999" value="3" /></label>
+            <span>:</span>
+            <label>高<input id="ratioH" type="number" min="1" max="999" value="2" /></label>
+            <button id="applyRatio" class="mini-button">应用</button>
+          </div>
+          <button id="ratioLock" class="secondary-button inline-action toggle-button">锁定当前比例</button>
+        </div>
+
+        <div class="control-group">
+          <label class="group-label">布局</label>
+          <div class="segmented" role="group" aria-label="布局">
+            <button class="mode-button active" data-mode="mosaic">拼贴</button>
+            <button class="mode-button" data-mode="grid">网格</button>
+            <button class="mode-button" data-mode="rows">行列</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label class="group-label">图片</label>
+          <div class="segmented fit-segmented" role="group" aria-label="图片适配">
+            <button class="fit-button active" data-fit="cover">裁切</button>
+            <button class="fit-button" data-fit="contain">完整</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label class="group-label">区域背景</label>
+          <div class="color-control">
+            <input id="bgColor" type="color" value="#ffffff" aria-label="区域背景颜色" />
+            <details class="rgb-details">
+              <summary>RGB</summary>
+              <div class="rgb-grid" aria-label="RGB 背景颜色">
+                <label>R<input id="bgR" type="number" min="0" max="255" value="255" /></label>
+                <label>G<input id="bgG" type="number" min="0" max="255" value="255" /></label>
+                <label>B<input id="bgB" type="number" min="0" max="255" value="255" /></label>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label class="group-label">空白</label>
+          <div class="segmented blank-segmented" role="group" aria-label="空白上限">
+            <button class="blank-button active" data-blank="0.1">10%</button>
+            <button class="blank-button" data-blank="0.05">5%</button>
+            <button class="blank-button" data-blank="0">无</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label class="group-label">填满</label>
+          <div class="segmented fill-segmented" role="group" aria-label="填满方向">
+            <button class="fill-button active" data-fill="auto">自动</button>
+            <button class="fill-button" data-fill="vertical">上下</button>
+            <button class="fill-button" data-fill="horizontal">左右</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="range-row">
+            <label for="gapRange">间距</label>
+            <output id="gapValue">10</output>
+          </div>
+          <input id="gapRange" type="range" min="0" max="40" value="10" />
+        </div>
+
+        <div class="control-group">
+          <div class="range-row">
+            <label for="roundRange">圆角</label>
+            <output id="roundValue">6</output>
+          </div>
+          <input id="roundRange" type="range" min="0" max="28" value="6" />
+        </div>
+
+        <div class="control-group">
+          <label class="check-row">
+            <input id="showGrid" type="checkbox" checked />
+            <span>网格</span>
+          </label>
+          <button id="shuffleButton" class="secondary-button inline-action">随机板式</button>
+        </div>
+
+        <div class="control-group">
+          <label class="group-label">导出清晰度</label>
+          <div class="segmented quality-segmented" role="group" aria-label="导出清晰度">
+            <button class="quality-button" data-scale="1">标准</button>
+            <button class="quality-button active" data-scale="2">高清</button>
+            <button class="quality-button" data-scale="4">超清</button>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <input id="fileInput" type="file" accept="image/*" multiple />
+          <button id="addButton" class="primary-button">添加图片</button>
+          <button id="demoButton" class="secondary-button">示例图片</button>
+          <button id="exportButton" class="secondary-button">导出 PNG</button>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div class="status">
+            <strong id="imageCount">0 张图片</strong>
+            <span id="frameSize">960 × 560</span>
+          </div>
+          <div id="dropState" class="drop-state">本地处理</div>
+        </header>
+
+        <div id="stageWrap" class="stage-wrap">
+          <canvas id="stage" width="1200" height="780"></canvas>
+        </div>
+      </section>
+
+      <aside class="queue-panel">
+        <div class="queue-head">
+          <h2>图片</h2>
+          <div class="queue-actions">
+            <button id="clearImagesButton" class="text-button danger-text">清空全部</button>
+            <button id="reverseButton" class="icon-button compact" title="反转顺序" aria-label="反转顺序">⇅</button>
+          </div>
+        </div>
+        <div id="thumbList" class="thumb-list" aria-live="polite"></div>
+      </aside>
+    </main>
+
+    <script src="./app.js?v=20260604-layout-random-1"></script>
+  </body>
+</html>
