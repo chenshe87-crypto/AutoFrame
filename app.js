@@ -4,6 +4,8 @@ const LOGICAL_WIDTH = 1200;
 const LOGICAL_HEIGHT = 780;
 const CANVAS_PADDING = 16;
 const MIN_FRAME_SIZE = 80;
+const ACCENT_COLOR = "#ff6f6f";
+const ACCENT_FILL = "rgba(255, 111, 111, 0.14)";
 
 const ratioPresets = {
   free: null,
@@ -18,8 +20,8 @@ const state = {
   mode: "mosaic",
   fit: "cover",
   tool: "move",
-  gap: 10,
-  radius: 6,
+  gap: 0,
+  radius: 0,
   showGrid: true,
   blankLimit: 0.1,
   fillAxis: "auto",
@@ -29,7 +31,7 @@ const state = {
   customRatioW: 3,
   customRatioH: 2,
   exportScale: 2,
-  backgroundColor: "#ffffff",
+  backgroundColor: "#f4f6f7",
   randomStep: 0,
   randomMax: 0,
   validRandomSteps: [],
@@ -59,6 +61,7 @@ const els = {
   ratioH: document.querySelector("#ratioH"),
   applyRatio: document.querySelector("#applyRatio"),
   bgColor: document.querySelector("#bgColor"),
+  eyedropperButton: document.querySelector("#eyedropperButton"),
   bgR: document.querySelector("#bgR"),
   bgG: document.querySelector("#bgG"),
   bgB: document.querySelector("#bgB"),
@@ -112,6 +115,28 @@ function hexToRgb(hex) {
 function setBackgroundColor(hex) {
   state.backgroundColor = hex.toLowerCase();
   draw();
+}
+
+function updateRangeProgress(input) {
+  const min = Number(input.min) || 0;
+  const max = Number(input.max) || 100;
+  const value = Number(input.value) || 0;
+  const percent = max === min ? 0 : ((value - min) / (max - min)) * 100;
+  input.style.setProperty("--range-fill", `${clamp(percent, 0, 100)}%`);
+}
+
+async function pickBackgroundColor() {
+  if (!("EyeDropper" in window)) {
+    els.bgColor.click();
+    return;
+  }
+
+  try {
+    const result = await new EyeDropper().open();
+    if (result?.sRGBHex) setBackgroundColor(result.sRGBHex);
+  } catch (error) {
+    // Canceling the native eyedropper is expected and should leave the color unchanged.
+  }
 }
 
 function setupCanvasResolution() {
@@ -1878,17 +1903,17 @@ function drawFrame(context, fillBackground = true) {
     context.shadowBlur = 24;
     context.shadowOffsetY = 12;
     context.fillStyle = state.backgroundColor;
-    roundedRect(context, x, y, w, h, 10);
+    roundedRect(context, x, y, w, h, state.radius);
     context.fill();
     context.shadowColor = "transparent";
   }
-  context.strokeStyle = "#167c80";
+  context.strokeStyle = ACCENT_COLOR;
   context.lineWidth = 2;
   context.setLineDash([8, 7]);
-  roundedRect(context, x, y, w, h, 10);
+  roundedRect(context, x, y, w, h, state.radius);
   context.stroke();
   context.setLineDash([]);
-  context.fillStyle = "#167c80";
+  context.fillStyle = ACCENT_COLOR;
   [
     [x, y],
     [x + w, y],
@@ -1919,10 +1944,10 @@ function drawEmptyState(context) {
 function drawDropOverlay(context) {
   if (!state.draggingOver) return;
   context.save();
-  context.fillStyle = "rgba(22, 124, 128, 0.14)";
-  context.strokeStyle = "#167c80";
+  context.fillStyle = ACCENT_FILL;
+  context.strokeStyle = ACCENT_COLOR;
   context.lineWidth = 3;
-  roundedRect(context, state.frame.x, state.frame.y, state.frame.w, state.frame.h, 12);
+  roundedRect(context, state.frame.x, state.frame.y, state.frame.w, state.frame.h, Math.max(8, state.radius));
   context.fill();
   context.stroke();
   context.restore();
@@ -1945,7 +1970,7 @@ function drawSwapOverlay(context) {
   context.save();
   if (selectedRect) {
     context.lineWidth = 3;
-    context.strokeStyle = "#167c80";
+    context.strokeStyle = ACCENT_COLOR;
     context.setLineDash([]);
     roundedRect(context, selectedRect.x, selectedRect.y, selectedRect.w, selectedRect.h, state.radius + 3);
     context.stroke();
@@ -1993,7 +2018,7 @@ function drawDragGhost(context) {
   context.shadowColor = "transparent";
   context.globalAlpha = 1;
   context.lineWidth = 2;
-  context.strokeStyle = "#167c80";
+  context.strokeStyle = ACCENT_COLOR;
   roundedRect(context, x, y, w, h, state.radius);
   context.stroke();
   context.restore();
@@ -2008,7 +2033,7 @@ function draw() {
   drawFrame(ctx);
   if (state.layouts.length) {
     ctx.save();
-    roundedRect(ctx, state.frame.x, state.frame.y, state.frame.w, state.frame.h, 10);
+    roundedRect(ctx, state.frame.x, state.frame.y, state.frame.w, state.frame.h, state.radius);
     ctx.clip();
     state.layouts.forEach((rect) => drawLayoutImage(ctx, rect.image, rect));
     ctx.restore();
@@ -2030,6 +2055,10 @@ function syncUi() {
   stage.dataset.layoutCount = String(state.layouts.length);
   els.gapValue.textContent = state.gap;
   els.roundValue.textContent = state.radius;
+  els.gapRange.value = state.gap;
+  els.roundRange.value = state.radius;
+  updateRangeProgress(els.gapRange);
+  updateRangeProgress(els.roundRange);
   els.dropState.textContent = state.draggingOver ? "释放图片" : "本地处理";
   els.moveTool.classList.toggle("active", state.tool === "move");
   els.imageTool.classList.toggle("active", state.tool === "image");
@@ -2183,9 +2212,9 @@ function makeDemoImage(index) {
     [980, 680],
   ];
   const palettes = [
-    ["#167c80", "#f4b64a", "#ffffff"],
+    ["#ff9863", "#ff6f6f", "#ffffff"],
     ["#e85f4c", "#25364a", "#ffffff"],
-    ["#264653", "#2a9d8f", "#f7f3ea"],
+    ["#3c4652", "#ff7a6b", "#f7f3ea"],
     ["#8a4fff", "#00a6a6", "#fff4d6"],
     ["#e9c46a", "#d9573f", "#18324a"],
     ["#3a86ff", "#ffbe0b", "#fff"],
@@ -2308,6 +2337,7 @@ els.applyRatio.addEventListener("click", applyCustomRatio);
 els.bgColor.addEventListener("input", (event) => {
   setBackgroundColor(event.target.value);
 });
+els.eyedropperButton.addEventListener("click", pickBackgroundColor);
 [els.bgR, els.bgG, els.bgB].forEach((input) => {
   input.addEventListener("input", () => {
     setBackgroundColor(rgbToHex(els.bgR.value, els.bgG.value, els.bgB.value));
