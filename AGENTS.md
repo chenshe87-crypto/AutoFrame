@@ -2,10 +2,15 @@
 
 ## Project Root
 
-- Work in this directory: `/Users/11179013/Documents/Codex/autoframe/image-layout-web`.
-- The parent folder is not the Git repository. This directory contains `.git`.
+- Work in this directory: `/Users/11179013/Documents/Codex/autoframe`.
+- This directory is the project root and the required working directory for repository and validation commands.
 - Remote repository: `https://github.com/chenshe87-crypto/AutoFrame.git`.
 - Published site: `https://chenshe87-crypto.github.io/AutoFrame/`.
+
+## Required Command Directory
+
+- All `git status`, `git diff`, `git commit`, `git push`, tests, and local static server commands must be executed from `/Users/11179013/Documents/Codex/autoframe`.
+- Do not run repository operations, tests, or local server startup from any parent directory or old subdirectory path.
 
 ## Project Shape
 
@@ -37,7 +42,7 @@
 
 ## Verification Checklist
 
-- Start a local static server from this directory when browser validation is needed:
+- Start a local static server from `/Users/11179013/Documents/Codex/autoframe` when browser validation is needed:
 
 ```bash
 python3 -m http.server 8080

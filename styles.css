@@ -409,17 +409,37 @@ button {
   place-items: center;
   width: 52px;
   height: 56px;
-  border: 1px solid rgba(255, 193, 180, 0.9);
+  border: 1px solid rgba(217, 225, 232, 0.9);
   border-radius: 8px;
-  color: var(--accent-ink);
-  background: var(--surface-tint);
+  color: var(--muted);
+  background: #f6f8fa;
   font-size: 12px;
   font-weight: 900;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
 }
 
 .eyedropper-button:hover {
+  color: var(--ink-soft);
+  background: #edf2f6;
+  border-color: var(--line-strong);
+}
+
+.eyedropper-button.active,
+.eyedropper-button:active,
+.eyedropper-button:focus-visible {
   color: #fff;
   background: var(--accent-gradient);
+  border-color: var(--accent-line);
+  box-shadow: var(--control-shadow);
+}
+
+.eyedropper-button:active {
+  transform: translateY(1px);
 }
 
 .rgb-grid {
@@ -458,7 +478,7 @@ button {
 
 .custom-ratio-details {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .custom-ratio-details summary {
@@ -479,32 +499,36 @@ button {
   display: none;
 }
 
-.custom-ratio-details[open] summary {
-  color: var(--accent-ink);
-  background: var(--surface-tint);
+.custom-ratio-details[open] summary,
+.custom-ratio-details.active summary {
+  color: #fff;
+  background: var(--accent-gradient);
+  border-color: var(--accent-line);
+  box-shadow: 0 7px 16px rgba(233, 81, 97, 0.2);
 }
 
 .custom-ratio-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) 58px;
+  grid-template-columns: minmax(0, 1fr) 12px minmax(0, 1fr) 60px;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .custom-ratio-row label {
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr);
+  grid-template-columns: 16px minmax(0, 1fr);
   align-items: center;
-  gap: 5px;
-  height: 36px;
+  gap: 4px;
+  height: 34px;
   min-width: 0;
-  padding: 0 8px;
+  padding: 0 9px;
   color: var(--muted);
   border: 1px solid rgba(217, 225, 232, 0.9);
-  border-radius: 8px;
+  border-radius: 9px;
   background: #f6f8fa;
   font-size: 12px;
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 
 .custom-ratio-row input {
@@ -517,24 +541,50 @@ button {
   font-weight: 800;
   text-align: center;
   outline: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .custom-ratio-row span {
+  display: grid;
+  place-items: center;
   color: var(--muted);
   font-weight: 800;
+  line-height: 1;
 }
 
 .mini-button {
-  height: 36px;
-  border-radius: 8px;
-  color: #fff;
-  background: var(--ink-soft);
+  height: 34px;
+  border: 1px solid rgba(217, 225, 232, 0.9);
+  border-radius: 9px;
+  color: var(--muted);
+  background: #f6f8fa;
   font-size: 12px;
   font-weight: 800;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
 }
 
 .mini-button:hover {
-  background: var(--ink);
+  color: var(--ink-soft);
+  background: #edf2f6;
+  border-color: var(--line-strong);
+}
+
+.mini-button.active,
+.mini-button:active,
+.mini-button:focus-visible {
+  color: #fff;
+  background: var(--accent-gradient);
+  border-color: var(--accent-line);
+  box-shadow: var(--control-shadow);
+}
+
+.mini-button:active {
+  transform: translateY(1px);
 }
 
 input[type="range"] {
@@ -647,30 +697,46 @@ input[type="range"]::-moz-range-thumb {
 
 .primary-button {
   height: 42px;
-  color: var(--accent-ink);
-  background: var(--surface-tint);
-  border: 1px solid rgba(255, 193, 180, 0.9);
+  color: var(--muted);
+  background: #f6f8fa;
+  border: 1px solid rgba(217, 225, 232, 0.9);
   box-shadow: none;
 }
 
 .primary-button:hover {
-  background: #ffe8e3;
+  color: var(--ink-soft);
+  background: #edf2f6;
+  border-color: var(--line-strong);
   box-shadow: none;
 }
 
 .secondary-button {
-  color: var(--accent-ink);
-  background: var(--surface-tint);
-  border: 1px solid rgba(255, 193, 180, 0.9);
+  color: var(--muted);
+  background: #f6f8fa;
+  border: 1px solid rgba(217, 225, 232, 0.9);
 }
 
 .secondary-button:hover {
-  background: #ffe8e3;
+  color: var(--ink-soft);
+  background: #edf2f6;
+  border-color: var(--line-strong);
 }
 
 .primary-button:active,
 .secondary-button:active {
   transform: translateY(1px);
+}
+
+.primary-button.active,
+.primary-button:active,
+.primary-button:focus-visible,
+.secondary-button.active,
+.secondary-button:active,
+.secondary-button:focus-visible {
+  color: #fff;
+  background: var(--accent-gradient);
+  border-color: var(--accent-line);
+  box-shadow: var(--control-shadow);
 }
 
 .secondary-button:disabled {

@@ -4,11 +4,24 @@
 
 ## 项目位置
 
-- 本地仓库：`/Users/11179013/Documents/Codex/autoframe/image-layout-web`
+- 本地仓库：`/Users/11179013/Documents/Codex/autoframe`
 - GitHub 仓库：`https://github.com/chenshe87-crypto/AutoFrame.git`
 - GitHub Pages：`https://chenshe87-crypto.github.io/AutoFrame/`
 
-注意：`autoframe/` 外层目录不是 Git 仓库，真正的仓库在 `image-layout-web/`。
+注意：后续所有仓库操作、测试和本地验证都以 `/Users/11179013/Documents/Codex/autoframe` 作为唯一项目根目录。
+
+## 命令执行目录规则
+
+以下命令必须在 `/Users/11179013/Documents/Codex/autoframe` 执行：
+
+- `git status`
+- `git diff`
+- `git commit`
+- `git push`
+- 测试命令
+- 本地静态服务启动命令，例如 `python3 -m http.server 8080`
+
+不要在父目录或旧的子目录路径中执行 Git 操作、测试或本地服务启动。
 
 ## 技术结构
 
@@ -29,7 +42,7 @@ AutoFrame 是纯前端静态网页，不依赖构建工具。
 
 ## 迭代流程
 
-1. 在 `image-layout-web/` 中确认当前 Git 状态。
+1. 在 `/Users/11179013/Documents/Codex/autoframe` 中确认当前 Git 状态。
 2. 阅读相关实现，按现有代码风格做最小必要修改。
 3. 修改后先做本地验证，并记录验证结果。
 4. 汇报本地改动内容和测试结果。
@@ -47,7 +60,7 @@ AutoFrame 是纯前端静态网页，不依赖构建工具。
 
 ## 本地验证
 
-从仓库目录启动静态服务：
+从 `/Users/11179013/Documents/Codex/autoframe` 启动静态服务：
 
 ```bash
 python3 -m http.server 8080

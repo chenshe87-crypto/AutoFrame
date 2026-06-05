@@ -50,7 +50,6 @@ const state = {
 const els = {
   moveTool: document.querySelector("#moveTool"),
   imageTool: document.querySelector("#imageTool"),
-  ratioLock: document.querySelector("#ratioLock"),
   fileInput: document.querySelector("#fileInput"),
   addButton: document.querySelector("#addButton"),
   demoButton: document.querySelector("#demoButton"),
@@ -60,6 +59,7 @@ const els = {
   ratioW: document.querySelector("#ratioW"),
   ratioH: document.querySelector("#ratioH"),
   applyRatio: document.querySelector("#applyRatio"),
+  customRatioDetails: document.querySelector(".custom-ratio-details"),
   bgColor: document.querySelector("#bgColor"),
   eyedropperButton: document.querySelector("#eyedropperButton"),
   bgR: document.querySelector("#bgR"),
@@ -126,8 +126,10 @@ function updateRangeProgress(input) {
 }
 
 async function pickBackgroundColor() {
+  els.eyedropperButton.classList.add("active");
   if (!("EyeDropper" in window)) {
     els.bgColor.click();
+    requestAnimationFrame(() => els.eyedropperButton.classList.remove("active"));
     return;
   }
 
@@ -136,6 +138,8 @@ async function pickBackgroundColor() {
     if (result?.sRGBHex) setBackgroundColor(result.sRGBHex);
   } catch (error) {
     // Canceling the native eyedropper is expected and should leave the color unchanged.
+  } finally {
+    els.eyedropperButton.classList.remove("active");
   }
 }
 
@@ -330,15 +334,6 @@ function applyCustomRatio() {
   state.customRatioW = clamp(Number(els.ratioW.value) || 1, 1, 999);
   state.customRatioH = clamp(Number(els.ratioH.value) || 1, 1, 999);
   setRatioPreset("custom");
-}
-
-function toggleRatioLock() {
-  state.ratioLocked = !state.ratioLocked;
-  state.lockedRatio = state.frame.w / state.frame.h;
-  if (!state.ratioLocked && state.ratioPreset !== "free") {
-    state.ratioPreset = "free";
-  }
-  draw();
 }
 
 function frameCorners(frame = state.frame) {
@@ -2062,8 +2057,8 @@ function syncUi() {
   els.dropState.textContent = state.draggingOver ? "释放图片" : "本地处理";
   els.moveTool.classList.toggle("active", state.tool === "move");
   els.imageTool.classList.toggle("active", state.tool === "image");
-  els.ratioLock.classList.toggle("active", state.ratioLocked);
-  els.ratioLock.textContent = state.ratioLocked ? "比例已锁定" : "锁定当前比例";
+  els.applyRatio.classList.toggle("active", state.ratioPreset === "custom");
+  els.customRatioDetails.classList.toggle("active", state.ratioPreset === "custom");
   els.ratios.forEach((button) => {
     button.classList.toggle("active", button.dataset.ratio === state.ratioPreset);
   });
@@ -2320,7 +2315,6 @@ function exportPng() {
 
 els.moveTool.addEventListener("click", () => setTool("move"));
 els.imageTool.addEventListener("click", () => setTool("image"));
-els.ratioLock.addEventListener("click", toggleRatioLock);
 els.applyRatio.addEventListener("click", applyCustomRatio);
 [els.ratioW, els.ratioH].forEach((input) => {
   input.addEventListener("input", () => {
