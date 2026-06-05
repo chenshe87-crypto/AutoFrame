@@ -22,6 +22,22 @@
 - `draw()` is the main render path. It recomputes layouts, paints the canvas, and syncs UI state.
 - `state` is the source of truth for layout mode, image list, frame geometry, export scale, background color, and interaction state.
 
+## Default Workflow
+
+- 默认不要自动启动本地服务。
+- 默认不要做浏览器自动化验收。
+- 小改动只做代码修改和静态检查。
+- 只有我明确说“完整验收”时，才启动服务和浏览器测试。
+- 本地预览固定使用 `127.0.0.1:8080`。
+- 不要反复尝试 `localhost`、`127.0.0.1`、不同端口。
+- push 时优先使用 `git push origin main`。
+- 每次改动后必须简短说明：
+  - 改了哪些文件
+  - 实现了什么
+  - 我如何手动测试
+- 不要因为小改动消耗大量 token 做无意义验证。
+- 如果遇到权限、端口、remote、GitHub 登录问题，先报告，不要盲目重试。
+
 ## Interface Conventions
 
 - Keep the visual accent system on the Orange Coral gradient defined in `styles.css`.
@@ -35,20 +51,20 @@
 - Keep changes scoped to the requested task and follow the existing plain HTML/CSS/JavaScript style.
 - Do not introduce a framework, package manager, bundler, or build pipeline unless the user explicitly asks or the feature clearly requires it.
 - If browser caching could hide a shipped JavaScript change, update the `app.js?v=...` query string in `index.html`.
-- After local edits, validate the app before asking to publish.
+- 默认只做必要的静态检查；只有用户明确要求“完整验收”时，才做本地服务和浏览器验证。
 - Use one commit per completed task.
 - Write Git commit messages in Chinese and clearly describe what changed in that version.
 - Do not commit or push automatically. Report the local changes and verification result, then wait for the user's confirmation before running `git commit` and `git push`.
 
 ## Verification Checklist
 
-- Start a local static server from `/Users/11179013/Documents/Codex/autoframe` when browser validation is needed:
+- When a full verification is explicitly requested, start a local static server from `/Users/11179013/Documents/Codex/autoframe`:
 
 ```bash
 python3 -m http.server 8080
 ```
 
-- Open `http://localhost:8080`.
+- Open `http://127.0.0.1:8080`.
 - Check the main happy path:
   - Add demo images.
   - Switch layout modes: mosaic, grid, rows.

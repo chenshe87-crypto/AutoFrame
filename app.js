@@ -31,7 +31,7 @@ const state = {
   customRatioW: 3,
   customRatioH: 2,
   exportScale: 2,
-  backgroundColor: "#f4f6f7",
+  backgroundColor: "#e8f2ff",
   randomStep: 0,
   randomMax: 0,
   validRandomSteps: [],

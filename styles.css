@@ -912,6 +912,9 @@ input[type="range"]::-moz-range-thumb {
 
 .site-footer p {
   margin: 0;
+  max-width: 920px;
+  line-height: 1.7;
+  letter-spacing: 0.01em;
 }
 
 @media (max-width: 1040px) {
