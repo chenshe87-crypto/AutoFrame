@@ -6,6 +6,9 @@ const CANVAS_PADDING = 16;
 const MIN_FRAME_SIZE = 80;
 const ACCENT_COLOR = "#ff6f6f";
 const ACCENT_FILL = "rgba(255, 111, 111, 0.14)";
+const ZERO_GAP_SEAM_BLEED = 0.75;
+const NO_BLANK_TOLERANCE = 0.005;
+const HISTORY_LIMIT = 80;
 
 const ratioPresets = {
   free: null,
@@ -15,6 +18,12 @@ const ratioPresets = {
 };
 
 let renderScale = 1;
+const history = {
+  undo: [],
+  redo: [],
+  activeGroup: null,
+  restoring: false,
+};
 
 const state = {
   mode: "mosaic",
@@ -74,6 +83,8 @@ const els = {
   imageCount: document.querySelector("#imageCount"),
   frameSize: document.querySelector("#frameSize"),
   dropState: document.querySelector("#dropState"),
+  undoButton: document.querySelector("#undoButton"),
+  redoButton: document.querySelector("#redoButton"),
   thumbList: document.querySelector("#thumbList"),
   modes: [...document.querySelectorAll(".mode-button")],
   fits: [...document.querySelectorAll(".fit-button")],
@@ -112,7 +123,8 @@ function hexToRgb(hex) {
   };
 }
 
-function setBackgroundColor(hex) {
+function setBackgroundColor(hex, group = null) {
+  pushHistorySnapshot(group);
   state.backgroundColor = hex.toLowerCase();
   draw();
 }
@@ -123,6 +135,125 @@ function updateRangeProgress(input) {
   const value = Number(input.value) || 0;
   const percent = max === min ? 0 : ((value - min) / (max - min)) * 100;
   input.style.setProperty("--range-fill", `${clamp(percent, 0, 100)}%`);
+}
+
+function createHistorySnapshot() {
+  return {
+    mode: state.mode,
+    fit: state.fit,
+    gap: state.gap,
+    radius: state.radius,
+    blankLimit: state.blankLimit,
+    fillAxis: state.fillAxis,
+    ratioPreset: state.ratioPreset,
+    ratioLocked: state.ratioLocked,
+    lockedRatio: state.lockedRatio,
+    customRatioW: state.customRatioW,
+    customRatioH: state.customRatioH,
+    exportScale: state.exportScale,
+    backgroundColor: state.backgroundColor,
+    randomStep: state.randomStep,
+    nextImageId: state.nextImageId,
+    frame: { ...state.frame },
+    images: [...state.images],
+    manualSlotOrder: state.manualSlotOrder ? [...state.manualSlotOrder] : null,
+  };
+}
+
+function historySignature(snapshot) {
+  return JSON.stringify({
+    mode: snapshot.mode,
+    fit: snapshot.fit,
+    gap: snapshot.gap,
+    radius: snapshot.radius,
+    blankLimit: snapshot.blankLimit,
+    fillAxis: snapshot.fillAxis,
+    ratioPreset: snapshot.ratioPreset,
+    ratioLocked: snapshot.ratioLocked,
+    lockedRatio: snapshot.lockedRatio,
+    customRatioW: snapshot.customRatioW,
+    customRatioH: snapshot.customRatioH,
+    exportScale: snapshot.exportScale,
+    backgroundColor: snapshot.backgroundColor,
+    randomStep: snapshot.randomStep,
+    nextImageId: snapshot.nextImageId,
+    frame: snapshot.frame,
+    imageIds: snapshot.images.map((image) => image.id),
+    manualSlotOrder: snapshot.manualSlotOrder,
+  });
+}
+
+function updateHistoryButtons() {
+  els.undoButton.disabled = history.undo.length === 0;
+  els.redoButton.disabled = history.redo.length === 0;
+}
+
+function pushHistorySnapshot(group = null, snapshot = createHistorySnapshot()) {
+  if (history.restoring || (group && history.activeGroup === group)) return;
+
+  const signature = historySignature(snapshot);
+  const previous = history.undo[history.undo.length - 1];
+  if (!previous || historySignature(previous) !== signature) {
+    history.undo.push(snapshot);
+    if (history.undo.length > HISTORY_LIMIT) history.undo.shift();
+  }
+  history.redo = [];
+  history.activeGroup = group;
+  updateHistoryButtons();
+}
+
+function finishHistoryGroup(group) {
+  if (!group || history.activeGroup === group) {
+    history.activeGroup = null;
+  }
+}
+
+function restoreHistorySnapshot(snapshot) {
+  history.restoring = true;
+  state.mode = snapshot.mode;
+  state.fit = snapshot.fit;
+  state.gap = snapshot.gap;
+  state.radius = snapshot.radius;
+  state.blankLimit = snapshot.blankLimit;
+  state.fillAxis = snapshot.fillAxis;
+  state.ratioPreset = snapshot.ratioPreset;
+  state.ratioLocked = snapshot.ratioLocked;
+  state.lockedRatio = snapshot.lockedRatio;
+  state.customRatioW = snapshot.customRatioW;
+  state.customRatioH = snapshot.customRatioH;
+  state.exportScale = snapshot.exportScale;
+  state.backgroundColor = snapshot.backgroundColor;
+  state.randomStep = snapshot.randomStep;
+  state.nextImageId = snapshot.nextImageId;
+  state.frame = { ...snapshot.frame };
+  state.images = [...snapshot.images];
+  state.manualSlotOrder = snapshot.manualSlotOrder ? [...snapshot.manualSlotOrder] : null;
+  state.selectedImageId = null;
+  state.pointer = null;
+  state.dragGhost = null;
+  state.draggingOver = false;
+  renderThumbs();
+  draw();
+  history.restoring = false;
+  updateHistoryButtons();
+}
+
+function undoHistory() {
+  if (!history.undo.length) return;
+  history.activeGroup = null;
+  history.redo.push(createHistorySnapshot());
+  restoreHistorySnapshot(history.undo.pop());
+}
+
+function redoHistory() {
+  if (!history.redo.length) return;
+  history.activeGroup = null;
+  history.undo.push(createHistorySnapshot());
+  restoreHistorySnapshot(history.redo.pop());
+}
+
+function isEditableShortcutTarget(target) {
+  return target.closest?.("input, textarea, select, [contenteditable='true']");
 }
 
 async function pickBackgroundColor() {
@@ -312,7 +443,8 @@ function applyRatioToFrame(ratio) {
   });
 }
 
-function setRatioPreset(preset) {
+function setRatioPreset(preset, saveHistory = true) {
+  if (saveHistory) pushHistorySnapshot();
   state.ratioPreset = preset;
   state.randomStep = 0;
   if (preset === "free") {
@@ -331,9 +463,10 @@ function setRatioPreset(preset) {
 }
 
 function applyCustomRatio() {
+  pushHistorySnapshot();
   state.customRatioW = clamp(Number(els.ratioW.value) || 1, 1, 999);
   state.customRatioH = clamp(Number(els.ratioH.value) || 1, 1, 999);
-  setRatioPreset("custom");
+  setRatioPreset("custom", false);
 }
 
 function frameCorners(frame = state.frame) {
@@ -446,6 +579,23 @@ function roundedRect(context, x, y, w, h, r) {
   context.arcTo(x, y + h, x, y, radius);
   context.arcTo(x, y, x + w, y, radius);
   context.closePath();
+}
+
+function shouldBleedZeroGapSeams() {
+  return state.gap === 0 && state.radius === 0;
+}
+
+function bleedRect(rect) {
+  if (!shouldBleedZeroGapSeams()) {
+    return rect;
+  }
+
+  return {
+    x: rect.x - ZERO_GAP_SEAM_BLEED,
+    y: rect.y - ZERO_GAP_SEAM_BLEED,
+    w: rect.w + ZERO_GAP_SEAM_BLEED * 2,
+    h: rect.h + ZERO_GAP_SEAM_BLEED * 2,
+  };
 }
 
 function drawGrid(context) {
@@ -561,8 +711,9 @@ function setTool(tool) {
   draw();
 }
 
-function swapImagesById(sourceId, targetId) {
+function swapImagesById(sourceId, targetId, saveHistory = true) {
   if (!sourceId || !targetId || sourceId === targetId) return;
+  if (saveHistory) pushHistorySnapshot();
   const slotOrder = state.layouts.map((layout) => layout.image.id);
   const sourceSlot = slotOrder.indexOf(sourceId);
   const targetSlot = slotOrder.indexOf(targetId);
@@ -808,7 +959,7 @@ function validRandomStepsForAxis(axis) {
     if (
       !seenStyles.has(styleSignature) &&
       (state.fit !== "contain" || blankRatio <= effectiveBlankLimit()) &&
-      respectsFillAxis(layouts, state.frame)
+      respectsFillAxis(layouts, state.frame, axis)
     ) {
       seenStyles.add(styleSignature);
       candidates.push(step);
@@ -849,7 +1000,7 @@ function fillVariantCounts() {
 }
 
 function effectiveBlankLimit() {
-  return state.blankLimit <= 0 ? 0.005 : state.blankLimit;
+  return state.blankLimit <= 0 ? NO_BLANK_TOLERANCE : state.blankLimit;
 }
 
 function layoutBlankRatio(layouts) {
@@ -870,17 +1021,28 @@ function drawnImageArea(rect) {
   return source.naturalWidth * scale * source.naturalHeight * scale;
 }
 
-function respectsFillAxis(layouts, frame) {
-  if (state.fit !== "contain" || state.fillAxis === "auto") return true;
+function fillCoverageTolerance(frame) {
+  return state.blankLimit <= 0
+    ? NO_BLANK_TOLERANCE
+    : Math.max(NO_BLANK_TOLERANCE, state.gap / Math.max(frame.w, frame.h));
+}
+
+function respectsFillAxis(layouts, frame, axis = state.fillAxis) {
+  if (state.fit !== "contain") return true;
   if (!layouts.length) return false;
 
   const { horizontalGap, verticalGap } = axisCoverage(layouts, frame);
-  const tolerance = Math.max(0.006, state.gap / Math.max(frame.w, frame.h));
+  const tolerance = fillCoverageTolerance(frame);
 
-  if (state.fillAxis === "vertical") {
+  if (axis === "auto") {
+    return state.blankLimit > 0 ||
+      verticalGap <= tolerance ||
+      horizontalGap <= tolerance;
+  }
+  if (axis === "vertical") {
     return verticalGap <= tolerance;
   }
-  if (state.fillAxis === "horizontal") {
+  if (axis === "horizontal") {
     return horizontalGap <= tolerance;
   }
   return true;
@@ -1315,10 +1477,7 @@ function randomContainMosaicLayout(images) {
   if (state.fillAxis === "auto") {
     const rowLayouts = randomContainMosaicRowLayout(images);
     const columnLayouts = randomContainMosaicColumnLayout(images);
-    return layoutBlankRatioInFrame(columnLayouts, state.frame) <
-      layoutBlankRatioInFrame(rowLayouts, state.frame)
-      ? columnLayouts
-      : rowLayouts;
+    return chooseAutoFillLayout(rowLayouts, columnLayouts, state.frame);
   }
 
   return randomContainMosaicRowLayout(images);
@@ -1462,7 +1621,7 @@ function searchVerticalFillLayout(images) {
       if (!inside) continue;
 
       const verticalOk = axisCoverage(layouts, state.frame).verticalGap <=
-        Math.max(0.006, state.gap / Math.max(state.frame.w, state.frame.h));
+        fillCoverageTolerance(state.frame);
       if (!verticalOk) continue;
 
       const blankRatio = layoutBlankRatioInFrame(layouts, state.frame);
@@ -1510,12 +1669,28 @@ function layoutContainGroups(groups, frame) {
   if (state.fillAxis === "auto") {
     const rowLayouts = layoutContainRowGroups(groups, frame);
     const columnLayouts = layoutContainColumnGroups(groups, frame);
-    return layoutBlankRatioInFrame(columnLayouts, frame) <
-      layoutBlankRatioInFrame(rowLayouts, frame)
-      ? columnLayouts
-      : rowLayouts;
+    return chooseAutoFillLayout(rowLayouts, columnLayouts, frame);
   }
   return layoutContainRowGroups(groups, frame);
+}
+
+function chooseAutoFillLayout(rowLayouts, columnLayouts, frame) {
+  const rowBlank = layoutBlankRatioInFrame(rowLayouts, frame);
+  const columnBlank = layoutBlankRatioInFrame(columnLayouts, frame);
+
+  if (state.blankLimit > 0) {
+    return columnBlank < rowBlank ? columnLayouts : rowLayouts;
+  }
+
+  const rowFits = respectsFillAxis(rowLayouts, frame, "horizontal");
+  const columnFits = respectsFillAxis(columnLayouts, frame, "vertical");
+
+  if (rowFits && columnFits) {
+    return columnBlank < rowBlank ? columnLayouts : rowLayouts;
+  }
+  if (columnFits) return columnLayouts;
+  if (rowFits) return rowLayouts;
+  return columnBlank < rowBlank ? columnLayouts : rowLayouts;
 }
 
 function layoutContainRowGroups(groups, frame) {
@@ -1850,17 +2025,18 @@ function randomCoverMosaicLayout(images) {
 
 function drawImageCover(context, image, rect) {
   const source = image.el;
-  const scale = Math.max(rect.w / source.naturalWidth, rect.h / source.naturalHeight);
-  const sw = rect.w / scale;
-  const sh = rect.h / scale;
+  const paintRect = bleedRect(rect);
+  const scale = Math.max(paintRect.w / source.naturalWidth, paintRect.h / source.naturalHeight);
+  const sw = paintRect.w / scale;
+  const sh = paintRect.h / scale;
   const sx = (source.naturalWidth - sw) / 2;
   const sy = (source.naturalHeight - sh) / 2;
 
   context.save();
   setHighQuality(context);
-  roundedRect(context, rect.x, rect.y, rect.w, rect.h, state.radius);
+  roundedRect(context, paintRect.x, paintRect.y, paintRect.w, paintRect.h, state.radius);
   context.clip();
-  context.drawImage(source, sx, sy, sw, sh, rect.x, rect.y, rect.w, rect.h);
+  context.drawImage(source, sx, sy, sw, sh, paintRect.x, paintRect.y, paintRect.w, paintRect.h);
   context.restore();
 }
 
@@ -1871,14 +2047,18 @@ function drawImageContain(context, image, rect) {
   const dh = source.naturalHeight * scale;
   const dx = rect.x + (rect.w - dw) / 2;
   const dy = rect.y + (rect.h - dh) / 2;
+  const clipRect = bleedRect(rect);
+  const drawRect = bleedRect({ x: dx, y: dy, w: dw, h: dh });
 
   context.save();
   setHighQuality(context);
-  roundedRect(context, rect.x, rect.y, rect.w, rect.h, state.radius);
+  roundedRect(context, clipRect.x, clipRect.y, clipRect.w, clipRect.h, state.radius);
   context.clip();
-  context.fillStyle = state.backgroundColor;
-  context.fillRect(rect.x, rect.y, rect.w, rect.h);
-  context.drawImage(source, dx, dy, dw, dh);
+  if (!shouldBleedZeroGapSeams()) {
+    context.fillStyle = state.backgroundColor;
+    context.fillRect(rect.x, rect.y, rect.w, rect.h);
+  }
+  context.drawImage(source, drawRect.x, drawRect.y, drawRect.w, drawRect.h);
   context.restore();
 }
 
@@ -2059,6 +2239,18 @@ function syncUi() {
   els.imageTool.classList.toggle("active", state.tool === "image");
   els.applyRatio.classList.toggle("active", state.ratioPreset === "custom");
   els.customRatioDetails.classList.toggle("active", state.ratioPreset === "custom");
+  els.modes.forEach((button) => {
+    button.classList.toggle("active", button.dataset.mode === state.mode);
+  });
+  els.fits.forEach((button) => {
+    button.classList.toggle("active", button.dataset.fit === state.fit);
+  });
+  els.blanks.forEach((button) => {
+    button.classList.toggle("active", Number(button.dataset.blank) === state.blankLimit);
+  });
+  els.fills.forEach((button) => {
+    button.classList.toggle("active", button.dataset.fill === state.fillAxis);
+  });
   els.ratios.forEach((button) => {
     button.classList.toggle("active", button.dataset.ratio === state.ratioPreset);
   });
@@ -2081,6 +2273,7 @@ function syncUi() {
     ? `随机板式 ${displayStep}/${state.randomMax}`
     : "随机板式";
   syncFillLabels();
+  updateHistoryButtons();
 }
 
 function syncFillLabels() {
@@ -2129,7 +2322,7 @@ function renderThumbs() {
     remove.setAttribute("aria-label", "移除");
     remove.textContent = "×";
     remove.addEventListener("click", () => {
-      URL.revokeObjectURL(image.src);
+      pushHistorySnapshot();
       state.images.splice(index, 1);
       state.randomStep = 0;
       state.manualSlotOrder = null;
@@ -2147,6 +2340,7 @@ function renderThumbs() {
       const from = Number(event.dataTransfer.getData("text/plain"));
       const to = Number(item.dataset.index);
       if (Number.isNaN(from) || from === to) return;
+      pushHistorySnapshot();
       const [moved] = state.images.splice(from, 1);
       state.images.splice(to, 0, moved);
       state.randomStep = 0;
@@ -2188,7 +2382,10 @@ async function addFiles(files) {
     ),
   );
 
-  state.images.push(...loaded.filter(Boolean));
+  const validImages = loaded.filter(Boolean);
+  if (!validImages.length) return;
+  pushHistorySnapshot();
+  state.images.push(...validImages);
   state.randomStep = 0;
   state.manualSlotOrder = null;
   renderThumbs();
@@ -2260,9 +2457,7 @@ function makeDemoImage(index) {
 }
 
 async function addDemoImages() {
-  state.images.forEach((image) => {
-    if (image.src.startsWith("blob:")) URL.revokeObjectURL(image.src);
-  });
+  pushHistorySnapshot();
   state.images = await Promise.all(
     Array.from({ length: 8 }, (_, index) => makeDemoImage(index)),
   );
@@ -2295,7 +2490,7 @@ function exportPng() {
   outputCtx.fillRect(0, 0, state.frame.w, state.frame.h);
 
   outputCtx.save();
-  roundedRect(outputCtx, 0, 0, state.frame.w, state.frame.h, 10);
+  roundedRect(outputCtx, 0, 0, state.frame.w, state.frame.h, state.radius);
   outputCtx.clip();
   state.layouts.forEach((rect) => {
     drawLayoutImage(outputCtx, rect.image, {
@@ -2318,6 +2513,7 @@ els.imageTool.addEventListener("click", () => setTool("image"));
 els.applyRatio.addEventListener("click", applyCustomRatio);
 [els.ratioW, els.ratioH].forEach((input) => {
   input.addEventListener("input", () => {
+    pushHistorySnapshot("custom-ratio");
     state.customRatioW = clamp(Number(els.ratioW.value) || 1, 1, 999);
     state.customRatioH = clamp(Number(els.ratioH.value) || 1, 1, 999);
     if (state.ratioPreset === "custom") {
@@ -2327,22 +2523,27 @@ els.applyRatio.addEventListener("click", applyCustomRatio);
       draw();
     }
   });
+  input.addEventListener("change", () => finishHistoryGroup("custom-ratio"));
 });
 els.bgColor.addEventListener("input", (event) => {
-  setBackgroundColor(event.target.value);
+  setBackgroundColor(event.target.value, "bg-color");
 });
+els.bgColor.addEventListener("change", () => finishHistoryGroup("bg-color"));
 els.eyedropperButton.addEventListener("click", pickBackgroundColor);
 [els.bgR, els.bgG, els.bgB].forEach((input) => {
   input.addEventListener("input", () => {
-    setBackgroundColor(rgbToHex(els.bgR.value, els.bgG.value, els.bgB.value));
+    setBackgroundColor(rgbToHex(els.bgR.value, els.bgG.value, els.bgB.value), "bg-rgb");
   });
+  input.addEventListener("change", () => finishHistoryGroup("bg-rgb"));
 });
 els.addButton.addEventListener("click", () => els.fileInput.click());
 els.fileInput.addEventListener("change", (event) => addFiles(event.target.files));
 els.demoButton.addEventListener("click", addDemoImages);
 els.exportButton.addEventListener("click", exportPng);
+els.undoButton.addEventListener("click", undoHistory);
+els.redoButton.addEventListener("click", redoHistory);
 els.clearImagesButton.addEventListener("click", () => {
-  state.images.forEach((image) => URL.revokeObjectURL(image.src));
+  pushHistorySnapshot();
   state.images = [];
   state.randomStep = 0;
   state.manualSlotOrder = null;
@@ -2351,6 +2552,7 @@ els.clearImagesButton.addEventListener("click", () => {
   draw();
 });
 els.reverseButton.addEventListener("click", () => {
+  pushHistorySnapshot();
   state.images.reverse();
   state.randomStep = 0;
   state.manualSlotOrder = null;
@@ -2358,19 +2560,24 @@ els.reverseButton.addEventListener("click", () => {
   draw();
 });
 els.gapRange.addEventListener("input", (event) => {
+  pushHistorySnapshot("gap");
   state.gap = Number(event.target.value);
   draw();
 });
+els.gapRange.addEventListener("change", () => finishHistoryGroup("gap"));
 els.roundRange.addEventListener("input", (event) => {
+  pushHistorySnapshot("radius");
   state.radius = Number(event.target.value);
   draw();
 });
+els.roundRange.addEventListener("change", () => finishHistoryGroup("radius"));
 els.showGrid.addEventListener("change", (event) => {
   state.showGrid = event.target.checked;
   draw();
 });
 els.shuffleButton.addEventListener("click", () => {
   if (!state.randomMax) return;
+  pushHistorySnapshot();
   const currentIndex = state.validRandomSteps.indexOf(state.randomStep);
   const nextIndex = currentIndex >= state.validRandomSteps.length - 1 ? -1 : currentIndex + 1;
   state.randomStep = nextIndex === -1 ? 0 : state.validRandomSteps[nextIndex];
@@ -2379,6 +2586,7 @@ els.shuffleButton.addEventListener("click", () => {
 });
 els.modes.forEach((button) => {
   button.addEventListener("click", () => {
+    pushHistorySnapshot();
     state.mode = button.dataset.mode;
     state.randomStep = 0;
     state.manualSlotOrder = null;
@@ -2389,6 +2597,7 @@ els.modes.forEach((button) => {
 });
 els.fits.forEach((button) => {
   button.addEventListener("click", () => {
+    pushHistorySnapshot();
     state.fit = button.dataset.fit;
     state.randomStep = 0;
     state.manualSlotOrder = null;
@@ -2399,6 +2608,7 @@ els.fits.forEach((button) => {
 });
 els.blanks.forEach((button) => {
   button.addEventListener("click", () => {
+    pushHistorySnapshot();
     state.blankLimit = Number(button.dataset.blank);
     state.randomStep = 0;
     state.manualSlotOrder = null;
@@ -2409,6 +2619,7 @@ els.blanks.forEach((button) => {
 });
 els.fills.forEach((button) => {
   button.addEventListener("click", () => {
+    pushHistorySnapshot();
     state.fillAxis = button.dataset.fill;
     state.randomStep = 0;
     state.manualSlotOrder = null;
@@ -2424,6 +2635,7 @@ els.ratios.forEach((button) => {
 });
 els.qualities.forEach((button) => {
   button.addEventListener("click", () => {
+    pushHistorySnapshot();
     state.exportScale = Number(button.dataset.scale);
     draw();
   });
@@ -2454,6 +2666,7 @@ stage.addEventListener("pointerdown", (event) => {
     state.dragGhost = null;
   }
 
+  const historySnapshot = createHistorySnapshot();
   state.pointer = {
     start: point,
     original: { ...state.frame },
@@ -2461,6 +2674,8 @@ stage.addEventListener("pointerdown", (event) => {
     handle,
     sourceImageId: imageRect?.image.id || null,
     targetImageId: null,
+    historySnapshot,
+    historySignature: historySignature(historySnapshot),
     moved: false,
   };
   stage.style.cursor = action === "swap-image" ? "grabbing" : stage.style.cursor;
@@ -2510,12 +2725,19 @@ stage.addEventListener("pointermove", (event) => {
 });
 
 stage.addEventListener("pointerup", (event) => {
+  const pointer = state.pointer;
   if (
-    state.pointer?.action === "swap-image" &&
-    state.pointer.moved &&
-    state.pointer.targetImageId
+    pointer?.action === "swap-image" &&
+    pointer.moved &&
+    pointer.targetImageId
   ) {
-    swapImagesById(state.pointer.sourceImageId, state.pointer.targetImageId);
+    pushHistorySnapshot(null, pointer.historySnapshot);
+    swapImagesById(pointer.sourceImageId, pointer.targetImageId, false);
+  } else if (
+    pointer?.historySnapshot &&
+    pointer.historySignature !== historySignature(createHistorySnapshot())
+  ) {
+    pushHistorySnapshot(null, pointer.historySnapshot);
   }
   state.dragGhost = null;
   state.pointer = null;
@@ -2549,6 +2771,24 @@ stage.addEventListener("pointercancel", () => {
 
 window.addEventListener("drop", (event) => {
   if (event.dataTransfer?.files?.length) addFiles(event.dataTransfer.files);
+});
+
+window.addEventListener("keydown", (event) => {
+  if (isEditableShortcutTarget(event.target)) return;
+  const key = event.key.toLowerCase();
+  const modifier = event.metaKey || event.ctrlKey;
+  if (!modifier) return;
+
+  if (key === "z" && event.shiftKey) {
+    event.preventDefault();
+    redoHistory();
+  } else if (key === "z") {
+    event.preventDefault();
+    undoHistory();
+  } else if (key === "y") {
+    event.preventDefault();
+    redoHistory();
+  }
 });
 
 window.addEventListener("resize", () => {

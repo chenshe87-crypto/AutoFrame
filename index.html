@@ -167,6 +167,16 @@
             <strong id="imageCount">0 张图片</strong>
             <span id="frameSize">960 × 560</span>
           </div>
+          <div class="canvas-actions" aria-label="历史操作">
+            <button id="undoButton" class="history-button" type="button" title="撤回上一步 (Ctrl/Cmd+Z)" aria-label="撤回上一步" disabled>
+              <span>↶</span>
+              <strong>撤回</strong>
+            </button>
+            <button id="redoButton" class="history-button" type="button" title="前进一步 (Ctrl/Cmd+Shift+Z 或 Ctrl+Y)" aria-label="前进一步" disabled>
+              <span>↷</span>
+              <strong>前进</strong>
+            </button>
+          </div>
           <div id="dropState" class="drop-state">本地处理</div>
         </header>
 
@@ -195,6 +205,6 @@
       </p>
     </footer>
 
-    <script src="./app.js?v=20260609-apple-style-1"></script>
+    <script src="./app.js?v=20260609-history-1"></script>
   </body>
 </html>
