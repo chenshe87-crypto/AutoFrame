@@ -451,7 +451,7 @@ function roundedRect(context, x, y, w, h, r) {
 function drawGrid(context) {
   if (!state.showGrid) return;
   context.save();
-  context.strokeStyle = "rgba(111, 125, 140, 0.16)";
+  context.strokeStyle = "rgba(105, 117, 134, 0.13)";
   context.lineWidth = 1;
   for (let x = 0; x <= LOGICAL_WIDTH; x += 40) {
     context.beginPath();
@@ -2022,7 +2022,7 @@ function drawDragGhost(context) {
 function draw() {
   computeLayouts();
   ctx.clearRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
-  ctx.fillStyle = "#f4f7f9";
+  ctx.fillStyle = "#f7f8fb";
   ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
   drawGrid(ctx);
   drawFrame(ctx);
@@ -2209,10 +2209,10 @@ function makeDemoImage(index) {
   const palettes = [
     ["#ff9863", "#ff6f6f", "#ffffff"],
     ["#e85f4c", "#25364a", "#ffffff"],
-    ["#3c4652", "#ff7a6b", "#f7f3ea"],
-    ["#8a4fff", "#00a6a6", "#fff4d6"],
-    ["#e9c46a", "#d9573f", "#18324a"],
-    ["#3a86ff", "#ffbe0b", "#fff"],
+    ["#6b7280", "#ff7a6b", "#f7f3ea"],
+    ["#5b7cfa", "#00a6a6", "#fff4d6"],
+    ["#f4b64a", "#d9573f", "#18324a"],
+    ["#3a86ff", "#54c6eb", "#fff"],
     ["#0b6e4f", "#e6aace", "#f8fafc"],
     ["#5c677d", "#ff7a59", "#ffffff"],
   ];
